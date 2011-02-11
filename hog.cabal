@@ -1,0 +1,17 @@
+Name:                hog
+Version:             0.1
+Synopsis:            Simple IRC logger bot.
+Description:         Simple IRC logger bot.
+License:             BSD3
+License-file:        LICENSE
+Author:              Chris Done
+Maintainer:          chrisdone@gmail.com
+Copyright:           2010 Chris Done
+Category:            Network
+Build-type:          Simple
+Cabal-version:       >=1.2
+
+Executable hog
+  Main-is:           Main.hs
+  Hs-source-dirs:    src
+  Build-depends:     base >4 && <5

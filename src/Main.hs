@@ -7,6 +7,7 @@
 
 module Main where
 
+import Data.List
 import Control.Concurrent.Delay
 import Control.Monad.Fix
 import Network
@@ -61,7 +62,7 @@ start options@Options{..} = do
       return Nothing
     flip (maybe (return ())) line $ \line -> do
        putStrLn $ "<- " ++ line
-       handleLine h line
+       handleLine options h line
        repeat
 
 -- | Register to the server by sending user/nick/pass/etc.
@@ -73,20 +74,35 @@ register h Options{..} = do
   send $ "NICK " ++ nick
 
 -- | Handle incoming lines; ping/pong, privmsg, etc.
-handleLine :: Handle -> String -> IO ()
-handleLine handle line = 
+handleLine :: Options -> Handle -> String -> IO ()
+handleLine options handle line = 
   case decode line of
     Nothing -> putStrLn $ "Unable to decode line " ++ show line
-    Just msg -> handleMsg handle msg
+    Just msg -> handleMsg options handle msg
     
 -- | Handle an IRC message.
-handleMsg :: Handle -> Message -> IO ()
-handleMsg h msg =
-  case msg of
-    Message{msg_command="PING"} -> reply $ msg {msg_command="PONG"}
+handleMsg :: Options -> Handle -> Message -> IO ()
+handleMsg options h msg =
+  case msg_command msg of
+    "PING" -> reply $ msg {msg_command="PONG"}
+    "376"  -> joinChannels options h
     _ -> return ()
     
   where reply = sendLine h . encode
+  
+-- | Join the requested channels.
+joinChannels :: Options -> Handle -> IO ()
+joinChannels Options{..} h = do
+  let chans = words $ replace ',' ' ' channels
+  putStrLn $ "Joining channels: " ++ show chans
+  sendLine h $ "JOIN :" ++ intercalate "," chans
+
+-- | Replace x with y in xs.
+replace :: Eq a => a -> a -> [a] -> [a]
+replace c y = go where
+    go [] = []
+    go (c':cs) | c'==c     = y : go cs
+               | otherwise = c' : go cs
 
 -- | Send a line on a handle, ignoring errors (like, if the socket's
 -- closed.)

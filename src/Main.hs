@@ -32,6 +32,7 @@ data Options = Options
   , pass      :: Maybe String -- ^ Maybe a *server* password.
   , nick      :: String       -- ^ The nick.
   , user      :: String       -- ^ User (not real name) to use.
+  , delay     :: Integer      -- ^ Reconnect delay (secs).
   } deriving (Show,Data,Typeable)
 
 -- | Options for the executable.
@@ -44,6 +45,7 @@ options  = Options
   , pass = Nothing
   , nick = def &= opt "hog" &= help "The nickname to use."
   , user = def &= opt "hog" &= help "The user name to use."
+  , delay = def &= opt (30::Integer) &= help "Reconnect delay (secs)."
   }
   &= summary "Hog IRC logger (C) Chris Done 2011"
   &= help "Simple IRC logger bot."
@@ -63,7 +65,7 @@ start options@Options{..} = do
   register h options
   fix $ \repeat -> do
     line <- catch (Just `fmap` hGetLine h) $ \_e -> do
-      delaySeconds 30
+      delaySeconds delay
       start options
       return Nothing
     flip (maybe (return ())) line $ \line -> do

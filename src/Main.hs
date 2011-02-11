@@ -10,6 +10,7 @@ module Main where
 import Control.Concurrent.Delay
 import Control.Monad.Fix
 import Network
+import Network.IRC
 import System.Console.CmdArgs
 import System.IO
 import System.Posix
@@ -48,25 +49,48 @@ main = withSocketsDo $ do
 
 -- | Connect to the IRC server and start logging.
 start :: Options -> IO ()
-start Options{..} = do
+start options@Options{..} = do
   hSetBuffering stdout NoBuffering
   h <- connectTo host (PortNumber (fromIntegral port))
   hSetBuffering h NoBuffering
-  let send = sendLine h
-  maybe (return ()) (send . ("PASS "++)) pass
-  send $ "USER " ++ user ++ " * * *"
-  send $ "NICK " ++ nick
+  register h options
   fix $ \repeat -> do
     line <- catch (Just `fmap` hGetLine h) $ \_e -> do
       delaySeconds 30
       start options
       return Nothing
     flip (maybe (return ())) line $ \line -> do
-       putStrLn line
+       putStrLn $ "<- " ++ line
+       handleLine h line
        repeat
+
+-- | Register to the server by sending user/nick/pass/etc.
+register :: Handle -> Options -> IO ()
+register h Options{..} = do
+  let send = sendLine h
+  maybe (return ()) (send . ("PASS "++)) pass
+  send $ "USER " ++ user ++ " * * *"
+  send $ "NICK " ++ nick
+
+-- | Handle incoming lines; ping/pong, privmsg, etc.
+handleLine :: Handle -> String -> IO ()
+handleLine handle line = 
+  case decode line of
+    Nothing -> putStrLn $ "Unable to decode line " ++ show line
+    Just msg -> handleMsg handle msg
+    
+-- | Handle an IRC message.
+handleMsg :: Handle -> Message -> IO ()
+handleMsg h msg =
+  case msg of
+    Message{msg_command="PING"} -> reply $ msg {msg_command="PONG"}
+    _ -> return ()
+    
+  where reply = sendLine h . encode
 
 -- | Send a line on a handle, ignoring errors (like, if the socket's
 -- closed.)
 sendLine :: Handle -> String -> IO ()
 sendLine h line = do
-  catch (hPutStrLn h line) $ \_e -> return ()
+  catch (do hPutStrLn h line; putStrLn $ "-> " ++ line) $
+    \_e -> return ()

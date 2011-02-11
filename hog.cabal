@@ -1,7 +1,8 @@
 Name:                hog
 Version:             0.1
 Synopsis:            Simple IRC logger bot.
-Description:         Simple IRC logger bot.
+Description:         Simple IRC logger bot, connects to given channels and
+                     logs lines to files of the corresponding channel names.
 License:             BSD3
 License-file:        LICENSE
 Author:              Chris Done

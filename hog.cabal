@@ -15,10 +15,10 @@ Executable hog
   Main-is:           Main.hs
   Hs-source-dirs:    src
   Build-depends:     base >4 && <5,
-                     unix == 2.4.*,
-                     cmdargs == 0.6.*,
-                     network == 2.2.*,
-                     irc == 0.4.*,
-                     filepath == 1.1.*,
-                     time == 1.1.*,
-                     old-locale == 1.*
+                     unix >= 2.4 && <2.5,
+                     cmdargs >= 0.6 && <0.7,
+                     network >= 2.2 && <2.3,
+                     irc >= 0.4 && <0.5,
+                     filepath >= 1.1 && <1.2,
+                     time >= 1.1 && <1.2,
+                     old-locale >= 1 && <2

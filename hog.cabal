@@ -18,4 +18,7 @@ Executable hog
                      unix == 2.4.*,
                      cmdargs == 0.6.*,
                      network == 2.2.*,
-                     irc == 0.4.*
+                     irc == 0.4.*,
+                     filepath == 1.1.*,
+                     time == 1.1.*,
+                     old-locale == 1.*

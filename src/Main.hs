@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, ScopedTypeVariables #-} 
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards, ScopedTypeVariables,
+  ViewPatterns #-} 
 {-# OPTIONS -Wall -fno-warn-missing-signatures -fno-warn-name-shadowing #-}
 
 -- | Main entry point, just connect to the given IRC server and join
@@ -7,13 +8,18 @@
 
 module Main where
 
-import Data.List
 import Control.Concurrent.Delay
+import Control.Monad
 import Control.Monad.Fix
+import Data.Char
+import Data.List
+import Data.Time
 import Network
 import Network.IRC
 import System.Console.CmdArgs
+import System.FilePath
 import System.IO
+import System.Locale
 import System.Posix
 
 -- | Options for the executable.
@@ -86,10 +92,37 @@ handleMsg options h msg =
   case msg_command msg of
     "PING" -> reply $ msg {msg_command="PONG"}
     "376"  -> joinChannels options h
+    "PRIVMSG" -> logMsg options msg
     _ -> return ()
     
   where reply = sendLine h . encode
   
+-- | Log a privmsg of a given channel to the right file.
+logMsg :: Options -> Message -> IO ()
+logMsg options@Options{..} msg@Message{..} = do
+  case msg_params of
+    [('#':chan),msg] -> logLine options chan from msg
+    _ -> putStrLn $ "Bogus message: " ++ show msg
+    
+    where from = case msg_prefix of
+                   Just (NickName str _ _) -> "<" ++ str ++ "> "
+                   _ -> "unknown"
+
+-- | Log a line of a channel.
+logLine :: Options -> String -> String -> String -> IO ()
+logLine Options{..} (sanitize -> chan) from line =
+  when (not (null chan)) $ do
+    now <- fmap format getCurrentTime
+    appendFile (logpath </> chan) $ 
+      now ++ " " ++ from ++ line ++ "\n"
+      
+  where format = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S %Z"
+
+-- | Sanitize a channel name.
+sanitize :: String -> String
+sanitize = filter ok where
+  ok c = isDigit c || elem (toLower c) ['a'..'z']
+
 -- | Join the requested channels.
 joinChannels :: Options -> Handle -> IO ()
 joinChannels Options{..} h = do
